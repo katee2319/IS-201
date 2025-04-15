@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tic Tac Toe Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background-color: #f0f0f0;
+      margin: 0;
+      flex-direction: column;
+      text-align: center;
+    }
+
+    .game-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+
+    h1 {
+      color: #333;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-gap: 10px;
+      margin-top: 20px;
+    }
+
+    .cell {
+      width: 100px;
+      height: 100px;
+      background-color: #fff;
+      border: 2px solid #333;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2em;
+      cursor: pointer;
+    }
+
+    .cell.disabled {
+      pointer-events: none;
+    }
+
+    .button {
+      padding: 10px 20px;
+      font-size: 1.2em;
+      cursor: pointer;
+      margin-top: 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+
+    .button:hover {
+      background-color: #45a049;
+    }
+
+    .status {
+      margin-top: 20px;
+      font-size: 1.5em;
+      color: #555;
+    }
+
+    /* Celebration Screen Styles */
+    .celebration-screen {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: rgba(0, 0, 0, 0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      font-size: 2em;
+      z-index: 100;
+      animation: fadeIn 1s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      0% {
+        opacity: 0;
+      }
+      100% {
+        opacity: 1;
+      }
+    }
+
+    .difficulty-buttons {
+      margin-top: 20px;
+    }
+
+    .difficulty-buttons button {
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+<a href="scratch.html">Scratch Page</a>
+  <div class="game-container">
+    <h1>Tic Tac Toe</h1>
+    <div class="status" id="status">Player X's Turn</div>
+    <div class="grid" id="grid">
+      <!-- Grid cells will be inserted here by JavaScript -->
+    </div>
+    <button class="button" id="resetBtn">Reset Game</button>
+    <button class="button" id="playComputerBtn">Play vs Computer</button>
+
+    <div class="difficulty-buttons">
+      <button class="button" id="easyBtn">Easy</button>
+      <button class="button" id="mediumBtn">Medium</button>
+      <button class="button" id="hardBtn">Hard</button>
+    </div>
+
+    <!-- Celebration Screen -->
+    <div class="celebration-screen" id="celebrationScreen">
+      <p>🎉 You Win! 🎉</p>
+      <button class="button" id="celebrationResetBtn">Play Again</button>
+    </div>
+  </div>
+
+  <script>
+    const grid = document.getElementById("grid");
+    const status = document.getElementById("status");
+    const resetBtn = document.getElementById("resetBtn");
+    const playComputerBtn = document.getElementById("playComputerBtn");
+    const easyBtn = document.getElementById("easyBtn");
+    const mediumBtn = document.getElementById("mediumBtn");
+    const hardBtn = document.getElementById("hardBtn");
+    const celebrationScreen = document.getElementById("celebrationScreen");
+    const celebrationResetBtn = document.getElementById("celebrationResetBtn");
+
+    let currentPlayer = "X"; // Player "X" starts the game
+    let gameBoard = ["", "", "", "", "", "", "", "", ""]; // Array to track the board state
+    let gameOver = false;
+    let isComputerGame = false;
+    let computerDifficulty = "easy"; // Default difficulty
+
+    // Create the 3x3 grid
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement("div");
+      cell.classList.add("cell");
+      cell.dataset.index = i;
+      cell.addEventListener("click", handleCellClick);
+      grid.appendChild(cell);
+    }
+
+    // Handle cell clicks
+    function handleCellClick(e) {
+      if (gameOver || e.target.classList.contains("disabled")) return;
+
+      const cell = e.target;
+      const index = cell.dataset.index;
+
+      // If the cell is already taken, do nothing
+      if (gameBoard[index] !== "") return;
+
+      // Mark the cell with the current player's symbol
+      gameBoard[index] = currentPlayer;
+      cell.textContent = currentPlayer;
+
+      // Check for a winner or a draw
+      if (checkWinner(currentPlayer)) {
+        celebrationScreen.style.display = "block"; // Show celebration screen
+        status.textContent = `${currentPlayer} Wins!`;
+        gameOver = true;
+        disableCells();
+      } else if (gameBoard.every(cell => cell !== "")) {
+        status.textContent = "It's a Draw!";
+        gameOver = true;
+      } else {
+        // Switch to the other player
+        currentPlayer = currentPlayer === "X" ? "O" : "X";
+        status.textContent = isComputerGame && currentPlayer === "O" 
+          ? "Computer's Turn" 
+          : `Player ${currentPlayer}'s Turn`;
+
+        // If it's the computer's turn, let the computer make a move
+        if (isComputerGame && currentPlayer === "O") {
+          setTimeout(computerMove, 500); // Delay the computer's move
+        }
+      }
+    }
+
+    // Check for a winner
+    function checkWinner(player) {
+      const winningCombinations = [
+        [0, 1, 2],
+        [3, 4, 5],
+        [6, 7, 8],
+        [0, 3, 6],
+        [1, 4, 7],
+        [2, 5, 8],
+        [0, 4, 8],
+        [2, 4, 6]
+      ];
+
+      return winningCombinations.some(combination => {
+        return combination.every(index => gameBoard[index] === player);
+      });
+    }
+
+    // Disable all cells after the game is over
+    function disableCells() {
+      const cells = document.querySelectorAll(".cell");
+      cells.forEach(cell => {
+        cell.classList.add("disabled");
+      });
+    }
+
+    // Computer's move (random choice for easy difficulty)
+    function computerMove() {
+      let availableCells = gameBoard.map((value, index) => value === "" ? index : null).filter(index => index !== null);
+
+      if (computerDifficulty === "easy") {
+        // Random move (easy)
+        const randomIndex = availableCells[Math.floor(Math.random() * availableCells.length)];
+        gameBoard[randomIndex] = "O";
+        const cell = document.querySelector(`.cell[data-index='${randomIndex}']`);
+        cell.textContent = "O";
+      } else if (computerDifficulty === "medium") {
+        // Medium difficulty: block or make a random move
+        let move = findBestMove("O");
+        if (move === null) {
+          const randomIndex = availableCells[Math.floor(Math.random() * availableCells.length)];
+          move = randomIndex;
+        }
+        gameBoard[move] = "O";
+        const cell = document.querySelector(`.cell[data-index='${move}']`);
+        cell.textContent = "O";
+      } else if (computerDifficulty === "hard") {
+        // Hard difficulty: optimal move using Minimax Algorithm
+        const move = minimax(gameBoard, "O");
+        gameBoard[move] = "O";
+        const cell = document.querySelector(`.cell[data-index='${move}']`);
+        cell.textContent = "O";
+      }
+
+      // Check for a winner or a draw after computer's move
+      if (checkWinner("O")) {
+        celebrationScreen.style.display = "block"; // Show celebration screen
+        status.textContent = "Computer Wins!";
+        gameOver = true;
+        disableCells();
+      } else if (gameBoard.every(cell => cell !== "")) {
+        status.textContent = "It's a Draw!";
+        gameOver = true;
+      } else {
+        // Switch back to Player X
+        currentPlayer = "X";
+        status.textContent = `Player ${currentPlayer}'s Turn`;
+      }
+    }
+
+    // Reset the game
+    resetBtn.addEventListener("click", () => {
+      gameBoard = ["", "", "", "", "", "", "", "", ""];
+      gameOver = false;
+      currentPlayer = "X";
+      status.textContent = "Player X's Turn";
+      
+      const cells = document.querySelectorAll(".cell");
+      cells.forEach(cell => {
+        cell.textContent = "";
+        cell.classList.remove("disabled");
+      });
+
+      celebrationScreen.style.display = "none"; // Hide celebration screen
+    });
+
+    // Start a game vs Computer
+    playComputerBtn.addEventListener("click", () => {
+      isComputerGame = true;
+      resetGame();
+      status.textContent = "Player X's Turn";
+    });
+
+    // Set difficulty
+    easyBtn.addEventListener("click", () => {
+      computerDifficulty = "easy";
+      resetGame();
+      status.textContent = "Player X's Turn";
+    });
+
+    mediumBtn.addEventListener("click", () => {
+      computerDifficulty = "medium";
+      resetGame();
+      status.textContent = "Player X's Turn";
+    });
+
+    hardBtn.addEventListener("click", () => {
+      computerDifficulty = "hard";
+      resetGame();
+      status.textContent = "Player X's Turn";
+    });
+
+    // Reset the game settings for a new match
+    function resetGame() {
+      gameBoard = ["", "", "", "", "", "", "", "", ""];
+      gameOver = false;
+      currentPlayer = "X";
+      const cells = document.querySelectorAll(".cell");
+      cells.forEach(cell => {
+        cell.textContent = "";
+        cell.classList.remove("disabled");
+      });
+      celebrationScreen.style.display = "none"; // Hide celebration screen
+    }
+
+    // Handle celebration reset
+    celebrationResetBtn.addEventListener("click", () => {
+      celebrationScreen.style.display = "none"; // Hide celebration screen
+      resetGame();
+    });
+  </script>
+
+</body>
+</html>
